@@ -393,6 +393,7 @@ export default function RockWall() {
   const [horizontalSide, setHorizontalSide] = useState<"left" | "right">("right");
   const [holdIdCounter, setHoldIdCounter] = useState(10);
   const [wallIdCounter, setWallIdCounter] = useState(2);
+  const [activeTab, setActiveTab] = useState<"wall" | "hold" | "select" | null>(null);
 
   const handleTypeChange = (type: HoldType) => {
     setSelectedHoldType(type);
@@ -604,153 +605,263 @@ export default function RockWall() {
         </div>
       </div>
 
-      {/* 右侧控制面板 */}
-      <div className="absolute top-4 right-4 z-10 bg-white/90 backdrop-blur rounded-lg shadow-lg p-4 w-80 max-h-[calc(100vh-8rem)] overflow-y-auto">
-        <h2 className="text-sm font-semibold text-slate-700 mb-3">岩壁设置</h2>
+      {/* 右侧图标菜单 - 父菜单紧贴右边 */}
+      <div className="absolute top-4 right-4 z-20 flex items-start gap-2">
+        {/* 子菜单面板 - 从左边展开，带动画 */}
+        {activeTab === "wall" && (
+          <div className="bg-white/95 backdrop-blur rounded-xl shadow-lg p-4 w-72 animate-slide-in">
+            <h2 className="text-sm font-semibold text-slate-700 mb-3 flex items-center gap-2">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="3" x2="9" y2="9"/></svg>
+              墙面设置
+            </h2>
 
-        {/* 当前墙角度修改 */}
-        {selectedWall && (
-          <div className="mb-4 p-3 bg-green-50 rounded-lg border border-green-200">
-            <label className="text-xs text-green-600 font-medium mb-2 block">修改当前墙角度</label>
-            <div className="flex flex-wrap gap-2">
-              {TILT_OPTIONS.map((opt) => (
+            {/* 当前墙角度修改 - 滑块控制 */}
+            {selectedWall && (
+              <div className="mb-4 p-3 bg-green-50 rounded-lg border border-green-200">
+                <label className="text-xs text-green-600 font-medium mb-2 block">
+                  修改当前墙角度 <span className="font-bold">{Math.round(selectedWall.angle * 180 / Math.PI)}°</span>
+                </label>
+                <input
+                  type="range"
+                  min="0"
+                  max="90"
+                  step="1"
+                  value={Math.round(selectedWall.angle * 180 / Math.PI)}
+                  onChange={(e) => updateSelectedWallAngle(parseFloat(e.target.value) * Math.PI / 180)}
+                  className="w-full h-2 bg-green-200 rounded-lg appearance-none cursor-pointer accent-green-500"
+                />
+                <div className="flex justify-between text-xs text-green-600 mt-1">
+                  <span>0°</span>
+                  <span>45°</span>
+                  <span>90°</span>
+                </div>
+                {/* 快捷角度按钮 */}
+                <div className="flex flex-wrap gap-1 mt-2">
+                  {[0, 15, 30, 45, 60, 75, 90].map((deg) => (
+                    <button
+                      key={deg}
+                      onClick={() => updateSelectedWallAngle(deg * Math.PI / 180)}
+                      className={`px-2 py-1 text-xs rounded transition-colors ${
+                        Math.abs(selectedWall.angle * 180 / Math.PI - deg) < 2
+                          ? "bg-green-500 text-white"
+                          : "bg-white text-slate-600 hover:bg-green-100 border border-slate-300"
+                      }`}
+                    >
+                      {deg}°
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* 添加新墙 */}
+            <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
+              <label className="text-xs text-blue-600 font-medium mb-2 block">添加新墙</label>
+
+              <div className="flex gap-2 mb-2">
                 <button
-                  key={opt.value}
-                  onClick={() => updateSelectedWallAngle(opt.value)}
-                  className={`px-3 py-1.5 text-xs rounded-md transition-colors ${
-                    selectedWall.angle === opt.value
-                      ? "bg-green-500 text-white"
-                      : "bg-white text-slate-600 hover:bg-slate-100 border border-slate-300"
-                  }`}
+                  onClick={() => setAddDirection("vertical")}
+                  className={`flex-1 px-2 py-1.5 text-xs rounded-md ${addDirection === "vertical" ? "bg-blue-500 text-white" : "bg-white text-slate-600 border border-slate-300"}`}
                 >
-                  {opt.label}
+                  纵向
                 </button>
-              ))}
+                <button
+                  onClick={() => setAddDirection("horizontal")}
+                  className={`flex-1 px-2 py-1.5 text-xs rounded-md ${addDirection === "horizontal" ? "bg-blue-500 text-white" : "bg-white text-slate-600 border border-slate-300"}`}
+                >
+                  横向
+                </button>
+              </div>
+
+              {addDirection === "horizontal" && (
+                <div className="flex gap-2 mb-2">
+                  <button
+                    onClick={() => setHorizontalSide("left")}
+                    className={`flex-1 px-2 py-1 text-xs rounded-md ${horizontalSide === "left" ? "bg-green-500 text-white" : "bg-white text-slate-600 border border-slate-300"}`}
+                  >
+                    左边
+                  </button>
+                  <button
+                    onClick={() => setHorizontalSide("right")}
+                    className={`flex-1 px-2 py-1 text-xs rounded-md ${horizontalSide === "right" ? "bg-green-500 text-white" : "bg-white text-slate-600 border border-slate-300"}`}
+                  >
+                    右边
+                  </button>
+                </div>
+              )}
+
+              <div className="flex gap-2 items-center mb-2">
+                <span className="text-xs text-slate-500">新墙角度:</span>
+                <select
+                  value={newWallAngle}
+                  onChange={(e) => setNewWallAngle(parseFloat(e.target.value))}
+                  className="flex-1 px-2 py-1.5 text-xs border border-slate-300 rounded-md"
+                >
+                  {[0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90].map((deg) => (
+                    <option key={deg} value={deg * Math.PI / 180}>{deg}°</option>
+                  ))}
+                </select>
+              </div>
+
+              <button
+                onClick={addNewWall}
+                className="w-full px-3 py-1.5 bg-blue-500 text-white text-xs rounded-md hover:bg-blue-600"
+              >
+                添加
+              </button>
+
+              {canDeleteWall() && (
+                <button
+                  onClick={deleteSelectedWall}
+                  className="mt-2 w-full px-3 py-1.5 bg-red-100 text-red-600 text-xs rounded-md hover:bg-red-200"
+                >
+                  删除当前墙
+                </button>
+              )}
+              {!canDeleteWall() && walls.length > 1 && (
+                <p className="mt-2 text-xs text-slate-400 text-center">无法删除最底层墙壁</p>
+              )}
             </div>
           </div>
         )}
 
-        {/* 添加新墙 */}
-        <div className="mb-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
-          <label className="text-xs text-blue-600 font-medium mb-2 block">添加新墙</label>
+        {activeTab === "hold" && (
+          <div className="bg-white/95 backdrop-blur rounded-xl shadow-lg p-4 w-72 animate-slide-in">
+            <h2 className="text-sm font-semibold text-slate-700 mb-3 flex items-center gap-2">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" strokeWidth="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4"/></svg>
+              岩点设置
+            </h2>
 
-          {/* 方向选择 */}
-          <div className="flex gap-2 mb-2">
-            <button
-              onClick={() => setAddDirection("vertical")}
-              className={`flex-1 px-2 py-1.5 text-xs rounded-md ${addDirection === "vertical" ? "bg-blue-500 text-white" : "bg-white text-slate-600 border border-slate-300"}`}
-            >
-              纵向
-            </button>
-            <button
-              onClick={() => setAddDirection("horizontal")}
-              className={`flex-1 px-2 py-1.5 text-xs rounded-md ${addDirection === "horizontal" ? "bg-blue-500 text-white" : "bg-white text-slate-600 border border-slate-300"}`}
-            >
-              横向
-            </button>
-          </div>
-
-          {/* 横向时选择左右 */}
-          {addDirection === "horizontal" && (
-            <div className="flex gap-2 mb-2">
-              <button
-                onClick={() => setHorizontalSide("left")}
-                className={`flex-1 px-2 py-1 text-xs rounded-md ${horizontalSide === "left" ? "bg-green-500 text-white" : "bg-white text-slate-600 border border-slate-300"}`}
-              >
-                左边
-              </button>
-              <button
-                onClick={() => setHorizontalSide("right")}
-                className={`flex-1 px-2 py-1 text-xs rounded-md ${horizontalSide === "right" ? "bg-green-500 text-white" : "bg-white text-slate-600 border border-slate-300"}`}
-              >
-                右边
-              </button>
+            <div className="mb-4">
+              <label className="text-xs text-slate-500 mb-2 block">岩点类型</label>
+              <div className="grid grid-cols-3 gap-2">
+                {(Object.keys(HOLD_TYPE_CONFIG) as HoldType[]).map((type) => (
+                  <button
+                    key={type}
+                    onClick={() => handleTypeChange(type)}
+                    className={`px-2 py-2 text-xs rounded-md transition-colors flex items-center gap-1.5 ${
+                      selectedHoldType === type ? "bg-blue-500 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                    }`}
+                  >
+                    <span className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: HOLD_TYPE_CONFIG[type].color }} />
+                    <span className="truncate">{HOLD_TYPE_CONFIG[type].label.split(" ")[0]}</span>
+                  </button>
+                ))}
+              </div>
             </div>
-          )}
 
-          {/* 新墙角度 */}
-          <div className="flex gap-2 items-center mb-2">
-            <span className="text-xs text-slate-500">新墙角度:</span>
-            <select
-              value={newWallAngle}
-              onChange={(e) => setNewWallAngle(parseFloat(e.target.value))}
-              className="flex-1 px-2 py-1.5 text-xs border border-slate-300 rounded-md"
-            >
-              {TILT_OPTIONS.map((opt) => (
-                <option key={opt.value} value={opt.value}>{opt.label}</option>
-              ))}
-            </select>
+            <div className="mb-4">
+              <label className="text-xs text-slate-500 mb-2 block">{HOLD_TYPE_CONFIG[selectedHoldType].label} 子类型</label>
+              <div className="grid grid-cols-2 gap-2">
+                {subtypes.map((subtype) => (
+                  <button
+                    key={subtype.id}
+                    onClick={() => setSelectedHoldSubtype(subtype.id)}
+                    className={`p-2 text-xs rounded-md transition-colors flex flex-col items-center gap-1 ${
+                      selectedHoldSubtype === subtype.id ? "bg-blue-500 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                    }`}
+                  >
+                    <HoldPreview type={selectedHoldType} subtypeId={subtype.id} color={HOLD_TYPE_CONFIG[selectedHoldType].color} />
+                    <span className="text-center">{subtype.label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {selectedHold && (
+              <div className="border-t border-slate-200 pt-3 mt-3">
+                <label className="text-xs text-slate-500 mb-2 block">选中岩点操作</label>
+                <div className="flex gap-2">
+                  <button onClick={() => rotateHold("right")} className="flex-1 px-3 py-2 bg-green-500 text-white text-xs rounded-md hover:bg-green-600">旋转</button>
+                  <button onClick={() => { setWalls(walls.map((w) => ({ ...w, holds: w.holds.filter((h) => h.id !== selectedHoldId) }))); setSelectedHoldId(null); }} className="flex-1 px-3 py-2 bg-red-500 text-white text-xs rounded-md hover:bg-red-600">删除</button>
+                </div>
+                <p className="text-xs text-slate-400 mt-2 text-center">双击岩点可直接删除</p>
+              </div>
+            )}
           </div>
+        )}
 
+        {activeTab === "select" && (
+          <div className="bg-white/95 backdrop-blur rounded-xl shadow-lg p-4 w-72 animate-slide-in">
+            <h2 className="text-sm font-semibold text-slate-700 mb-3 flex items-center gap-2">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" strokeWidth="2"><path d="M5 3l14 9-7 1-3 7z"/></svg>
+              选择预览
+            </h2>
+
+            <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
+              <div className="text-xs text-slate-500 space-y-1">
+                <p>当前墙: <span className="font-semibold text-slate-700">#{selectedWallId || "-"}</span></p>
+                <p>选中岩点: <span className="font-semibold text-slate-700">{selectedHoldId || "无"}</span></p>
+                <p>岩点总数: <span className="font-semibold text-slate-700">{totalHolds}</span></p>
+              </div>
+            </div>
+
+            {selectedHold && (
+              <div className="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                <label className="text-xs text-blue-600 font-medium mb-2 block">选中岩点</label>
+                <div className="flex items-center gap-3">
+                  <HoldPreview type={selectedHold.holdType} subtypeId={selectedHold.holdSubtype} color={selectedHold.color} />
+                  <div className="text-xs text-slate-600">
+                    <p className="font-medium">{HOLD_TYPE_CONFIG[selectedHold.holdType].label}</p>
+                    <p className="text-slate-500">{HOLD_SUBTYPES[selectedHold.holdType].find(s => s.id === selectedHold.holdSubtype)?.label || selectedHold.holdSubtype}</p>
+                    <p className="text-slate-400 mt-1">位置: ({selectedHold.localPosition[0].toFixed(2)}, {selectedHold.localPosition[1].toFixed(2)})</p>
+                  </div>
+                </div>
+                <div className="flex gap-2 mt-3">
+                  <button onClick={() => rotateHold("right")} className="flex-1 px-3 py-2 bg-green-500 text-white text-xs rounded-md hover:bg-green-600">旋转</button>
+                  <button onClick={() => { setWalls(walls.map((w) => ({ ...w, holds: w.holds.filter((h) => h.id !== selectedHoldId) }))); setSelectedHoldId(null); }} className="flex-1 px-3 py-2 bg-red-500 text-white text-xs rounded-md hover:bg-red-600">删除</button>
+                </div>
+              </div>
+            )}
+
+            <div className="mt-4 text-xs text-slate-400 space-y-1">
+              <p className="font-medium text-slate-500 mb-1">操作说明</p>
+              <p>• 点击墙面切换当前墙</p>
+              <p>• 点击岩点选中</p>
+              <p>• 双击岩点删除</p>
+              <p>• 方向键移动选中岩点</p>
+              <p>• Shift+方向键旋转</p>
+            </div>
+          </div>
+        )}
+
+        {/* 父菜单图标组 - 紧贴右边 */}
+        <div className="bg-white/95 backdrop-blur rounded-xl shadow-lg p-2 flex flex-col gap-1">
           <button
-            onClick={addNewWall}
-            className="w-full px-3 py-1.5 bg-blue-500 text-white text-xs rounded-md hover:bg-blue-600"
+            onClick={() => setActiveTab(activeTab === "wall" ? null : "wall")}
+            className={`p-3 rounded-lg transition-all ${activeTab === "wall" ? "bg-blue-100 shadow-md" : "hover:bg-slate-100"}`}
+            title="墙面"
           >
-            添加
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={activeTab === "wall" ? "#3b82f6" : "#64748b"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="3" y="3" width="18" height="18" rx="2" />
+              <line x1="3" y1="9" x2="21" y2="9" />
+              <line x1="3" y1="15" x2="21" y2="15" />
+              <line x1="9" y1="3" x2="9" y2="9" />
+              <line x1="15" y1="3" x2="15" y2="9" />
+              <line x1="9" y1="15" x2="9" y2="21" />
+              <line x1="15" y1="15" x2="15" y2="21" />
+            </svg>
           </button>
-
-          {canDeleteWall() && (
-            <button
-              onClick={deleteSelectedWall}
-              className="mt-2 w-full px-3 py-1.5 bg-red-100 text-red-600 text-xs rounded-md hover:bg-red-200"
-            >
-              删除当前墙
-            </button>
-          )}
-          {!canDeleteWall() && walls.length > 1 && (
-            <p className="mt-2 text-xs text-slate-400 text-center">无法删除最底层墙壁</p>
-          )}
+          <button
+            onClick={() => setActiveTab(activeTab === "hold" ? null : "hold")}
+            className={`p-3 rounded-lg transition-all ${activeTab === "hold" ? "bg-blue-100 shadow-md" : "hover:bg-slate-100"}`}
+            title="岩点"
+          >
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={activeTab === "hold" ? "#3b82f6" : "#64748b"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="10" />
+              <circle cx="12" cy="12" r="4" fill={activeTab === "hold" ? "#3b82f6" : "none"} />
+            </svg>
+          </button>
+          <button
+            onClick={() => setActiveTab(activeTab === "select" ? null : "select")}
+            className={`p-3 rounded-lg transition-all ${activeTab === "select" ? "bg-blue-100 shadow-md" : "hover:bg-slate-100"}`}
+            title="选择"
+          >
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={activeTab === "select" ? "#3b82f6" : "#64748b"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M5 3l14 9-7 1-3 7z" />
+            </svg>
+          </button>
         </div>
-
-        {/* 岩点类型选择 */}
-        <div className="mb-4">
-          <label className="text-xs text-slate-500 mb-2 block">岩点类型</label>
-          <div className="grid grid-cols-3 gap-2">
-            {(Object.keys(HOLD_TYPE_CONFIG) as HoldType[]).map((type) => (
-              <button
-                key={type}
-                onClick={() => handleTypeChange(type)}
-                className={`px-2 py-2 text-xs rounded-md transition-colors flex items-center gap-1.5 ${
-                  selectedHoldType === type ? "bg-blue-500 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-                }`}
-              >
-                <span className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: HOLD_TYPE_CONFIG[type].color }} />
-                <span className="truncate">{HOLD_TYPE_CONFIG[type].label.split(" ")[0]}</span>
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* 子类型选择 */}
-        <div className="mb-4">
-          <label className="text-xs text-slate-500 mb-2 block">{HOLD_TYPE_CONFIG[selectedHoldType].label} 子类型</label>
-          <div className="grid grid-cols-2 gap-2">
-            {subtypes.map((subtype) => (
-              <button
-                key={subtype.id}
-                onClick={() => setSelectedHoldSubtype(subtype.id)}
-                className={`p-2 text-xs rounded-md transition-colors flex flex-col items-center gap-1 ${
-                  selectedHoldSubtype === subtype.id ? "bg-blue-500 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-                }`}
-              >
-                <HoldPreview type={selectedHoldType} subtypeId={subtype.id} color={HOLD_TYPE_CONFIG[selectedHoldType].color} />
-                <span className="text-center">{subtype.label}</span>
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* 选中岩点操作 */}
-        {selectedHold && (
-          <div className="border-t border-slate-200 pt-3 mt-3">
-            <label className="text-xs text-slate-500 mb-2 block">选中岩点操作</label>
-            <div className="flex gap-2">
-              <button onClick={() => rotateHold("right")} className="flex-1 px-3 py-2 bg-green-500 text-white text-xs rounded-md hover:bg-green-600">旋转</button>
-              <button onClick={() => { setWalls(walls.map((w) => ({ ...w, holds: w.holds.filter((h) => h.id !== selectedHoldId) }))); setSelectedHoldId(null); }} className="flex-1 px-3 py-2 bg-red-500 text-white text-xs rounded-md hover:bg-red-600">删除</button>
-            </div>
-            <p className="text-xs text-slate-400 mt-2 text-center">双击岩点可直接删除</p>
-          </div>
-        )}
       </div>
 
       {/* 底部操作提示 */}
